@@ -6,7 +6,7 @@ export async function activateMeetingMode(): Promise<{ meetingId: string; closed
   const meetingId = `meeting-${Date.now()}`;
   const allTabs = await chrome.tabs.query({ pinned: false });
   const tabData = allTabs
-    .filter((t) => t.id && t.url)
+    .filter((t) => t.id && t.url && isAllowedUrl(t.url))
     .map((t) => ({ url: t.url!, title: t.title ?? "", favIconUrl: t.favIconUrl, windowId: t.windowId }));
 
   await bulkSnooze(tabData, meetingId);

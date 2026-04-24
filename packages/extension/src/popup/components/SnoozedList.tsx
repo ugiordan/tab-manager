@@ -16,7 +16,7 @@ export const SnoozedList: React.FC<SnoozedListProps> = ({ tabs, onWake, onRemove
   return (
     <div style={{ padding: 8 }}>
       <div style={{ fontWeight: 600, marginBottom: 8 }}>{tabs.length} snoozed</div>
-      {tabs.map((tab) => {
+      <div role="list">{tabs.map((tab) => {
         const timeLeft = tab.wakeAt ? tab.wakeAt - Date.now() : 0;
         const minsLeft = Math.max(0, Math.round(timeLeft / 60000));
         const hoursLeft = Math.floor(minsLeft / 60);
@@ -25,7 +25,7 @@ export const SnoozedList: React.FC<SnoozedListProps> = ({ tabs, onWake, onRemove
           : hoursLeft > 0 ? `${hoursLeft}h ${minsLeft % 60}m` : `${minsLeft}m`;
 
         return (
-          <div key={tab.id} style={{ display: "flex", alignItems: "center", padding: "4px 0", fontSize: 12 }}>
+          <div key={tab.id} role="listitem" tabIndex={0} style={{ display: "flex", alignItems: "center", padding: "4px 0", fontSize: 12 }}>
             {tab.favIconUrl && <img src={tab.favIconUrl} style={{ width: 14, height: 14, marginRight: 4 }} />}
             <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {tab.title}
@@ -35,7 +35,7 @@ export const SnoozedList: React.FC<SnoozedListProps> = ({ tabs, onWake, onRemove
             <Button variant="plain" size="sm" onClick={() => onRemove(tab.id)}>x</Button>
           </div>
         );
-      })}
+      })}</div>
     </div>
   );
 };

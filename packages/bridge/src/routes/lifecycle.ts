@@ -5,6 +5,13 @@ import type { LifecycleState, LifecycleTab } from "../types.js";
 
 const VALID_STATES: LifecycleState[] = ["snoozed", "queued", "watching"];
 
+function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch { return false; }
+}
+
 export function lifecycleRouter(context: AppContext): Router {
   const router = Router();
 
@@ -29,6 +36,14 @@ export function lifecycleRouter(context: AppContext): Router {
       res.status(400).json({ error: "url is required" });
       return;
     }
+    if (!isValidUrl(url)) {
+      res.status(400).json({ error: "url must be http or https" });
+      return;
+    }
+    if (wakeAt !== undefined && (typeof wakeAt !== "number" || wakeAt < 0)) {
+      res.status(400).json({ error: "wakeAt must be a positive number" });
+      return;
+    }
     const tab: LifecycleTab = {
       id: randomUUID(),
       url,
@@ -50,6 +65,10 @@ export function lifecycleRouter(context: AppContext): Router {
     const { url, title, favIconUrl, originWindowId } = req.body;
     if (!url) {
       res.status(400).json({ error: "url is required" });
+      return;
+    }
+    if (!isValidUrl(url)) {
+      res.status(400).json({ error: "url must be http or https" });
       return;
     }
     const queuedTabs = context.storage.listLifecycleTabs("queued");
@@ -77,8 +96,16 @@ export function lifecycleRouter(context: AppContext): Router {
       res.status(400).json({ error: "url is required" });
       return;
     }
+    if (!isValidUrl(url)) {
+      res.status(400).json({ error: "url must be http or https" });
+      return;
+    }
     if (!cssSelector) {
       res.status(400).json({ error: "cssSelector is required" });
+      return;
+    }
+    if (cssSelector.length > 500) {
+      res.status(400).json({ error: "cssSelector too long" });
       return;
     }
     const config = context.storage.getConfig();

@@ -16,14 +16,14 @@ export const WatchingList: React.FC<WatchingListProps> = ({ tabs, onOpen, onRemo
   return (
     <div style={{ padding: 8 }}>
       <div style={{ fontWeight: 600, marginBottom: 8 }}>{tabs.length} watching</div>
-      {tabs.map((tab) => {
+      <div role="list">{tabs.map((tab) => {
         const hasChanged = tab.changedAt !== null && tab.changedAt !== undefined;
         const lastChecked = tab.lastCheckedAt
           ? `${Math.round((Date.now() - tab.lastCheckedAt) / 60000)}m ago`
           : "never";
 
         return (
-          <div key={tab.id} style={{ display: "flex", alignItems: "center", padding: "4px 0", fontSize: 12 }}>
+          <div key={tab.id} role="listitem" tabIndex={0} style={{ display: "flex", alignItems: "center", padding: "4px 0", fontSize: 12 }}>
             {tab.favIconUrl && <img src={tab.favIconUrl} style={{ width: 14, height: 14, marginRight: 4 }} />}
             <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {tab.title}
@@ -34,7 +34,7 @@ export const WatchingList: React.FC<WatchingListProps> = ({ tabs, onOpen, onRemo
             <Button variant="plain" size="sm" onClick={() => onRemove(tab.id)}>x</Button>
           </div>
         );
-      })}
+      })}</div>
     </div>
   );
 };

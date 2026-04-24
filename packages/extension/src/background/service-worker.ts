@@ -112,9 +112,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === "WATCH_ELEMENT_SELECTED") {
-    // From content script: element was selected for watching
-    const { selector, url, title, favIconUrl } = message;
-    watchTab(url, title, favIconUrl, sender.tab?.windowId ?? 0, selector).then(async () => {
+    // From content script: use sender.tab for URL/title (trusted) instead of message fields
+    const { selector } = message;
+    const tabUrl = sender.tab?.url;
+    const tabTitle = sender.tab?.title ?? "";
+    const tabFavIcon = sender.tab?.favIconUrl;
+    if (!tabUrl || !isAllowedUrl(tabUrl)) { sendResponse({ watching: false }); return true; }
+    watchTab(tabUrl, tabTitle, tabFavIcon, sender.tab?.windowId ?? 0, selector).then(async () => {
       if (sender.tab?.id) {
         await chrome.tabs.remove(sender.tab.id);
       }
@@ -124,6 +128,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.type === "SNOOZE_FROM_POPUP") {
     const { tabId, url, title, favIconUrl, windowId, wakeAt } = message;
+    if (!isAllowedUrl(url)) { sendResponse({ snoozed: false }); return true; }
     snoozeTab(url, title, favIconUrl, windowId, wakeAt).then(async () => {
       await chrome.tabs.remove(tabId);
       sendResponse({ snoozed: true });
@@ -132,6 +137,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.type === "QUEUE_FROM_POPUP") {
     const { tabId, url, title, favIconUrl, windowId } = message;
+    if (!isAllowedUrl(url)) { sendResponse({ queued: false }); return true; }
     queueTab(url, title, favIconUrl, windowId).then(async () => {
       await chrome.tabs.remove(tabId);
       sendResponse({ queued: true });
@@ -152,13 +158,17 @@ async function checkOverdueSnoozes(): Promise<void> {
   const now = Date.now();
   for (const tab of snoozed) {
     if (tab.wakeAt && tab.wakeAt <= now && !tab.meetingId) {
-      const woken = await wakeTab(tab.id);
-      if (woken && isAllowedUrl(woken.url)) {
-        try {
-          await chrome.tabs.create({ url: woken.url, windowId: woken.originWindowId });
-        } catch {
-          await chrome.tabs.create({ url: woken.url });
+      try {
+        const woken = await wakeTab(tab.id);
+        if (woken && isAllowedUrl(woken.url)) {
+          try {
+            await chrome.tabs.create({ url: woken.url, windowId: woken.originWindowId });
+          } catch {
+            await chrome.tabs.create({ url: woken.url });
+          }
         }
+      } catch (err) {
+        console.error(`Failed to wake overdue tab ${tab.id}:`, err);
       }
     }
   }

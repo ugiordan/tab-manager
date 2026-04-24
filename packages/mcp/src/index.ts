@@ -13,6 +13,16 @@ import { handleTabsStats } from "./tools/tabs-stats.js";
 import { handleTabsSuggest } from "./tools/tabs-suggest.js";
 
 const BRIDGE_URL = process.env.BRIDGE_URL || "http://localhost:19876";
+try {
+  const parsed = new URL(BRIDGE_URL);
+  if (parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
+    console.error("BRIDGE_URL must point to localhost or 127.0.0.1");
+    process.exit(1);
+  }
+} catch {
+  console.error("BRIDGE_URL is not a valid URL");
+  process.exit(1);
+}
 const server = new McpServer({ name: "tab-lifecycle-manager", version: "0.1.0" });
 const client = new BridgeClient(BRIDGE_URL);
 
@@ -38,21 +48,21 @@ server.tool("tabs_lifecycle", "List lifecycle tabs (snoozed, queued, watching)",
 }, wrapTool(handleTabsLifecycle));
 
 server.tool("tabs_snooze", "Snooze tabs: close now, reopen later at a specified time", {
-  url: z.string().describe("Tab URL to snooze"),
+  url: z.string().url().describe("Tab URL to snooze"),
   title: z.string().describe("Tab title"),
   origin_window_id: z.number().describe("Window the tab came from"),
-  duration_minutes: z.number().optional().describe("Snooze duration in minutes (default: 60)"),
-  wake_at: z.number().optional().describe("Exact timestamp to wake (overrides duration_minutes)"),
+  duration_minutes: z.number().positive().optional().describe("Snooze duration in minutes (default: 60)"),
+  wake_at: z.number().positive().optional().describe("Exact timestamp to wake (overrides duration_minutes)"),
 }, wrapTool(handleTabsSnooze));
 
 server.tool("tabs_queue", "Queue a tab for later reading", {
-  url: z.string().describe("Tab URL to queue"),
+  url: z.string().url().describe("Tab URL to queue"),
   title: z.string().describe("Tab title"),
   origin_window_id: z.number().describe("Window the tab came from"),
 }, wrapTool(handleTabsQueue));
 
 server.tool("tabs_watch", "Watch a tab for page changes using a CSS selector", {
-  url: z.string().describe("Tab URL to watch"),
+  url: z.string().url().describe("Tab URL to watch"),
   title: z.string().describe("Tab title"),
   origin_window_id: z.number().describe("Window the tab came from"),
   css_selector: z.string().describe("CSS selector for the element to watch"),

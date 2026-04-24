@@ -3,7 +3,7 @@ import { BridgeClient } from "../client.js";
 export async function handleTabsList(client: BridgeClient, args: { window_id?: number }) {
   const { tabs } = await client.listTabs();
   let filtered = tabs;
-  if (args.window_id) filtered = tabs.filter((t: any) => t.windowId === args.window_id);
+  if (args.window_id !== undefined) filtered = tabs.filter((t: any) => t.windowId === args.window_id);
   if (filtered.length === 0) {
     return { content: [{ type: "text" as const, text: "No active tabs found." }] };
   }

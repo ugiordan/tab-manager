@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Manage Chrome tab lifecycle: snooze, queue, and watch tabs instead of losing them.",
   "permissions": ["tabs", "tabGroups", "notifications", "storage", "alarms", "contextMenus", "scripting"],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "background": { "service_worker": "service-worker.js", "type": "module" },
   "action": {
     "default_popup": "popup.html",

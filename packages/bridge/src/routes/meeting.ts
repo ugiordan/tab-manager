@@ -36,10 +36,12 @@ export function meetingRouter(context: AppContext): Router {
 
   router.post("/meeting/end", (req, res) => {
     const { meetingId } = req.body;
+    if (!meetingId) {
+      res.status(400).json({ error: "meetingId is required" });
+      return;
+    }
     const snoozed = context.storage.listLifecycleTabs("snoozed");
-    const toWake = meetingId
-      ? snoozed.filter((t) => t.meetingId === meetingId)
-      : snoozed.filter((t) => t.meetingId);
+    const toWake = snoozed.filter((t) => t.meetingId === meetingId);
 
     const woken: LifecycleTab[] = [];
     for (const tab of toWake) {

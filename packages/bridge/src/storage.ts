@@ -17,7 +17,11 @@ export class Storage {
   getConfig(): Config {
     if (!fs.existsSync(this.configPath)) return { ...DEFAULT_CONFIG };
     const raw = fs.readFileSync(this.configPath, "utf-8");
-    return JSON.parse(raw) as Config;
+    try {
+      return JSON.parse(raw) as Config;
+    } catch {
+      return { ...DEFAULT_CONFIG };
+    }
   }
 
   saveConfig(config: Config): void {
@@ -27,7 +31,11 @@ export class Storage {
   private readLifecycleStore(): LifecycleTab[] {
     if (!fs.existsSync(this.lifecyclePath)) return [];
     const raw = fs.readFileSync(this.lifecyclePath, "utf-8");
-    return JSON.parse(raw) as LifecycleTab[];
+    try {
+      return JSON.parse(raw) as LifecycleTab[];
+    } catch {
+      return [];
+    }
   }
 
   private writeLifecycleStore(tabs: LifecycleTab[]): void {
@@ -71,6 +79,10 @@ export class Storage {
   getActiveTabs(): ActiveTab[] {
     if (!fs.existsSync(this.activeTabsPath)) return [];
     const raw = fs.readFileSync(this.activeTabsPath, "utf-8");
-    return JSON.parse(raw) as ActiveTab[];
+    try {
+      return JSON.parse(raw) as ActiveTab[];
+    } catch {
+      return [];
+    }
   }
 }

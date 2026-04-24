@@ -33,28 +33,28 @@ export const App: React.FC = () => {
           {saved && <Alert variant="success" isInline title="Settings saved" style={{ marginBottom: 12 }} />}
 
           <FormGroup label="Warning threshold (tab count)" fieldId="warning">
-            <TextInput type="number" id="warning" value={config.thresholds.warning}
-              onChange={(_e, val) => setConfig({ ...config, thresholds: { ...config.thresholds, warning: parseInt(val) || 0 } })} />
+            <TextInput type="number" id="warning" min={1} value={config.thresholds.warning}
+              onChange={(_e, val) => setConfig({ ...config, thresholds: { ...config.thresholds, warning: Math.max(1, parseInt(val) || 1) } })} />
           </FormGroup>
 
           <FormGroup label="Alert threshold (tab count)" fieldId="alert">
-            <TextInput type="number" id="alert" value={config.thresholds.alert}
-              onChange={(_e, val) => setConfig({ ...config, thresholds: { ...config.thresholds, alert: parseInt(val) || 0 } })} />
+            <TextInput type="number" id="alert" min={1} value={config.thresholds.alert}
+              onChange={(_e, val) => setConfig({ ...config, thresholds: { ...config.thresholds, alert: Math.max(1, parseInt(val) || 1) } })} />
           </FormGroup>
 
           <FormGroup label="Stale tab threshold (minutes)" fieldId="stale">
-            <TextInput type="number" id="stale" value={config.staleMinutes}
-              onChange={(_e, val) => setConfig({ ...config, staleMinutes: parseInt(val) || 0 })} />
+            <TextInput type="number" id="stale" min={1} value={config.staleMinutes}
+              onChange={(_e, val) => setConfig({ ...config, staleMinutes: Math.max(1, parseInt(val) || 1) })} />
           </FormGroup>
 
           <FormGroup label="Default snooze duration (minutes)" fieldId="snooze">
-            <TextInput type="number" id="snooze" value={config.defaultSnoozeDurationMinutes}
-              onChange={(_e, val) => setConfig({ ...config, defaultSnoozeDurationMinutes: parseInt(val) || 60 })} />
+            <TextInput type="number" id="snooze" min={1} value={config.defaultSnoozeDurationMinutes}
+              onChange={(_e, val) => setConfig({ ...config, defaultSnoozeDurationMinutes: Math.max(1, parseInt(val) || 1) })} />
           </FormGroup>
 
           <FormGroup label="Watch poll interval (minutes)" fieldId="poll">
-            <TextInput type="number" id="poll" value={config.defaultPollIntervalMinutes}
-              onChange={(_e, val) => setConfig({ ...config, defaultPollIntervalMinutes: parseInt(val) || 30 })} />
+            <TextInput type="number" id="poll" min={1} value={config.defaultPollIntervalMinutes}
+              onChange={(_e, val) => setConfig({ ...config, defaultPollIntervalMinutes: Math.max(1, parseInt(val) || 1) })} />
           </FormGroup>
 
           <FormGroup label="Bridge server URL" fieldId="bridge">

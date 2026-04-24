@@ -18,7 +18,23 @@ export interface AppOptions {
 
 export function createApp(options: AppOptions) {
   const app = express();
-  app.use(express.json());
+
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && !origin.startsWith("chrome-extension://")) {
+      res.status(403).json({ error: "forbidden" });
+      return;
+    }
+    if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+    next();
+  });
+
+  app.use((req, _res, next) => {
+    console.log(`${req.method} ${req.path}`);
+    next();
+  });
+
+  app.use(express.json({ limit: "1mb" }));
 
   const storage = new Storage(options.storageDir);
   const context: AppContext = { storage };
@@ -28,6 +44,11 @@ export function createApp(options: AppOptions) {
   app.use(lifecycleRouter(context));
   app.use(meetingRouter(context));
   app.use(statsRouter(context));
+
+  app.use((err: any, _req: any, res: any, _next: any) => {
+    console.error("Unhandled error:", err);
+    res.status(500).json({ error: "internal server error" });
+  });
 
   return { app, context };
 }

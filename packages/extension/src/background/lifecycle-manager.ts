@@ -166,9 +166,18 @@ export async function bulkWakeByMeetingId(meetingId: string): Promise<LifecycleT
 export async function reorderQueue(orderedIds: string[]): Promise<void> {
   return withMutex(async () => {
     const tabs = await getLifecycleTabs();
+    const orderedSet = new Set(orderedIds);
+    // Set positions for ordered IDs
     for (let i = 0; i < orderedIds.length; i++) {
       const tab = tabs.find((t) => t.id === orderedIds[i]);
       if (tab && tab.state === "queued") tab.position = i;
+    }
+    // Compact unordered queued tabs after the ordered ones
+    let nextPos = orderedIds.length;
+    for (const tab of tabs) {
+      if (tab.state === "queued" && !orderedSet.has(tab.id)) {
+        tab.position = nextPos++;
+      }
     }
     await saveLifecycleTabs(tabs);
   });

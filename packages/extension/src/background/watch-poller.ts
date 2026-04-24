@@ -26,7 +26,7 @@ async function extractViaContentScript(
       const timeout = setTimeout(() => {
         chrome.tabs.onUpdated.removeListener(listener);
         reject(new Error("Tab load timeout"));
-      }, 30000);
+      }, 10000);
 
       function listener(updatedTabId: number, info: chrome.tabs.TabChangeInfo) {
         if (updatedTabId === tabId && info.status === "complete") {
@@ -42,7 +42,7 @@ async function extractViaContentScript(
     await chrome.scripting.executeScript({
       target: { tabId },
       func: (selector: string, id: string) => {
-        (globalThis as any).__extractElementParams = { selector, lifecycleId: id };
+        (globalThis as any).__tlm_extractElementParams = { selector, lifecycleId: id };
       },
       args: [cssSelector, lifecycleId],
     });
@@ -52,7 +52,7 @@ async function extractViaContentScript(
       const timeout = setTimeout(() => {
         chrome.runtime.onMessage.removeListener(listener);
         resolve({ content: null, error: "Extraction timeout" });
-      }, 10000);
+      }, 5000);
 
       function listener(message: any) {
         if (message.type === "WATCH_EXTRACT_RESULT" && message.lifecycleId === lifecycleId) {

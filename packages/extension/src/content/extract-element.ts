@@ -2,7 +2,7 @@
 // Returns the element's innerHTML or an error via messaging.
 
 (async function () {
-  const params = (globalThis as any).__extractElementParams as
+  const params = (globalThis as any).__tlm_extractElementParams as
     | { selector: string; lifecycleId: string }
     | undefined;
 

@@ -50,7 +50,7 @@ export const App: React.FC = () => {
       <Header activeTabs={tabs} snoozedCount={snoozed.length} queuedCount={queued.length} watchingCount={watching.length} />
       <Tabs activeKey={activeTab} onSelect={(_e, key) => setActiveTab(key as number)}>
         <Tab eventKey={0} title={<TabTitleText>Active ({tabs.length})</TabTitleText>}>
-          <ActiveTabList tabs={tabs} onMeetingMode={handleMeetingMode} meetingModeActive={meetingModeActive} onEndMeeting={handleEndMeeting} />
+          <ActiveTabList tabs={tabs} onMeetingMode={handleMeetingMode} meetingModeActive={meetingModeActive} onEndMeeting={handleEndMeeting} onRefresh={loadData} />
         </Tab>
         <Tab eventKey={1} title={<TabTitleText>Snoozed ({snoozed.length})</TabTitleText>}>
           <SnoozedList tabs={snoozed} onWake={handleWake} onRemove={handleRemove} />

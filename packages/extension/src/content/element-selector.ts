@@ -50,6 +50,8 @@
     overlay.remove();
     highlight.remove();
     tooltip.remove();
+    document.removeEventListener("keydown", onKeydown);
+    window.removeEventListener("beforeunload", cleanup);
   }
 
   overlay.addEventListener("mousemove", (e) => {
@@ -97,9 +99,9 @@
   // ESC to cancel
   function onKeydown(e: KeyboardEvent): void {
     if (e.key === "Escape") {
-      document.removeEventListener("keydown", onKeydown);
       cleanup();
     }
   }
   document.addEventListener("keydown", onKeydown);
+  window.addEventListener("beforeunload", cleanup);
 })();

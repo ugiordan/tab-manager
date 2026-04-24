@@ -9,10 +9,14 @@ interface ActiveTabListProps {
   onMeetingMode: () => void;
   meetingModeActive: boolean;
   onEndMeeting: () => void;
+  onRefresh?: () => void;
 }
 
-export const ActiveTabList: React.FC<ActiveTabListProps> = ({ tabs, onMeetingMode, meetingModeActive, onEndMeeting }) => {
+export const ActiveTabList: React.FC<ActiveTabListProps> = ({ tabs, onMeetingMode, meetingModeActive, onEndMeeting, onRefresh }) => {
   const [snoozeTarget, setSnoozeTarget] = useState<number | null>(null);
+
+  const windowIds = [...new Set(tabs.map(t => t.windowId))].sort((a, b) => a - b);
+  const windowLabel = (id: number) => `Window ${windowIds.indexOf(id) + 1}`;
 
   const byWindow = tabs.reduce<Record<number, TrackedTab[]>>((acc, tab) => {
     if (!acc[tab.windowId]) acc[tab.windowId] = [];
@@ -31,7 +35,7 @@ export const ActiveTabList: React.FC<ActiveTabListProps> = ({ tabs, onMeetingMod
       type: "SNOOZE_FROM_POPUP",
       tabId: snoozeTarget, url: tab.url, title: tab.title, favIconUrl: tab.favIconUrl,
       windowId: tab.windowId, wakeAt,
-    });
+    }, () => onRefresh?.());
     setSnoozeTarget(null);
   };
 
@@ -41,7 +45,7 @@ export const ActiveTabList: React.FC<ActiveTabListProps> = ({ tabs, onMeetingMod
     chrome.runtime.sendMessage({
       type: "QUEUE_FROM_POPUP",
       tabId, url: tab.url, title: tab.title, favIconUrl: tab.favIconUrl, windowId: tab.windowId,
-    });
+    }, () => onRefresh?.());
   };
 
   const handleWatch = (tabId: number) => {
@@ -49,7 +53,7 @@ export const ActiveTabList: React.FC<ActiveTabListProps> = ({ tabs, onMeetingMod
     chrome.scripting.executeScript({
       target: { tabId },
       files: ["content/element-selector.js"],
-    });
+    }).then(() => onRefresh?.()).catch(() => {});
   };
 
   return (
@@ -63,10 +67,10 @@ export const ActiveTabList: React.FC<ActiveTabListProps> = ({ tabs, onMeetingMod
         )}
       </div>
       {Object.entries(byWindow).map(([windowId, windowTabs]) => (
-        <div key={windowId} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 11, color: "#6a6e73", marginBottom: 4 }}>Window {windowId} ({windowTabs.length} tabs)</div>
+        <div key={windowId} role="list" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 11, color: "#6a6e73", marginBottom: 4 }}>{windowLabel(Number(windowId))} ({windowTabs.length} tabs)</div>
           {windowTabs.map((tab) => (
-            <div key={tab.id} style={{ display: "flex", alignItems: "center", padding: "2px 0", fontSize: 12 }}>
+            <div key={tab.id} role="listitem" tabIndex={0} style={{ display: "flex", alignItems: "center", padding: "2px 0", fontSize: 12 }}>
               {tab.favIconUrl && <img src={tab.favIconUrl} style={{ width: 14, height: 14, marginRight: 4 }} />}
               <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {tab.pinned ? "[P] " : ""}{tab.title}

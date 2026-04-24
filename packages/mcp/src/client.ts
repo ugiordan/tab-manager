@@ -17,8 +17,7 @@ export class BridgeClient {
         headers: { "Content-Type": "application/json", ...options.headers },
       });
       if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`Bridge returned ${res.status}: ${body}`);
+        throw new Error(`Bridge returned ${res.status}`);
       }
       return (await res.json()) as T;
     } finally {
@@ -26,13 +25,9 @@ export class BridgeClient {
     }
   }
 
-  async health(): Promise<{ status: string }> { return this.request("/health"); }
   async listTabs(): Promise<{ tabs: any[] }> { return this.request("/tabs"); }
-  async syncTabs(tabs: any[]): Promise<{ synced: number }> {
-    return this.request("/tabs/sync", { method: "POST", body: JSON.stringify({ tabs }) });
-  }
   async listLifecycle(state?: string): Promise<{ tabs: any[] }> {
-    const path = state ? `/lifecycle/${state}` : "/lifecycle";
+    const path = state ? `/lifecycle/${encodeURIComponent(state)}` : "/lifecycle";
     return this.request(path);
   }
   async snooze(data: { url: string; title: string; originWindowId: number; wakeAt: number; favIconUrl?: string }): Promise<{ tab: any }> {
@@ -45,10 +40,7 @@ export class BridgeClient {
     return this.request("/lifecycle/watch", { method: "POST", body: JSON.stringify(data) });
   }
   async wake(id: string): Promise<{ tab: any }> {
-    return this.request(`/lifecycle/${id}/wake`, { method: "POST" });
-  }
-  async removeLifecycle(id: string): Promise<{ removed: boolean }> {
-    return this.request(`/lifecycle/${id}`, { method: "DELETE" });
+    return this.request(`/lifecycle/${encodeURIComponent(id)}/wake`, { method: "POST" });
   }
   async meetingStart(): Promise<{ meetingId: string; snoozedCount: number; pinnedKept: number }> {
     return this.request("/meeting/start", { method: "POST" });
