@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Lifecycle Manager",
+  "version": "0.1.0",
+  "description": "Manage Chrome tab lifecycle: snooze, queue, and watch tabs instead of losing them.",
+  "permissions": ["tabs", "tabGroups", "notifications", "storage", "alarms", "contextMenus", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "service-worker.js", "type": "module" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+  },
+  "options_page": "options.html",
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+}
