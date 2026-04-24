@@ -7,15 +7,22 @@ Tab Lifecycle Manager is a Chrome extension + local server + MCP plugin that giv
 ## How It Works
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Active: Open tab
-    Active --> Snoozed: Snooze (time-based)
-    Active --> Queued: Queue for later
-    Active --> Watching: Watch for changes
-    Snoozed --> Active: Wake (alarm fires)
-    Queued --> Active: Pull next
-    Watching --> Active: Change detected
-    Active --> [*]: Close
+flowchart LR
+    Start(( )) -->|Open tab| Active
+    Active -->|Snooze| Snoozed
+    Active -->|Queue| Queued
+    Active -->|Watch| Watching
+    Snoozed -->|Alarm fires| Active
+    Queued -->|Pull next| Active
+    Watching -->|Change detected| Active
+    Active -->|Close| End(( ))
+
+    style Active fill:#4CAF50,color:#fff,stroke:#388E3C
+    style Snoozed fill:#FF9800,color:#fff,stroke:#F57C00
+    style Queued fill:#2196F3,color:#fff,stroke:#1976D2
+    style Watching fill:#9C27B0,color:#fff,stroke:#7B1FA2
+    style Start fill:#333,stroke:#333
+    style End fill:#333,stroke:#333
 ```
 
 ## The Four States

@@ -13,8 +13,10 @@ export async function activateMeetingMode(): Promise<{ meetingId: string; closed
 
   // Create a blank tab in each affected window so closing all tabs doesn't close the window
   const windowIds = new Set(allTabs.map((t) => t.windowId));
+  const placeholderTabIds: number[] = [];
   for (const windowId of windowIds) {
-    await chrome.tabs.create({ windowId, url: "chrome://newtab", active: true });
+    const placeholder = await chrome.tabs.create({ windowId, url: "chrome://newtab", active: true });
+    if (placeholder.id) placeholderTabIds.push(placeholder.id);
   }
 
   // Close only the tabs that were actually snoozed, not all non-pinned tabs
@@ -30,8 +32,8 @@ export async function activateMeetingMode(): Promise<{ meetingId: string; closed
   const config = stored.config ?? DEFAULT_EXTENSION_CONFIG;
   await updateBadge(remaining.length, config);
 
-  await chrome.storage.local.set({ meetingMode: { active: true, meetingId } });
-  return { meetingId, closedCount: tabIds.length };
+  await chrome.storage.local.set({ meetingMode: { active: true, meetingId, placeholderTabIds } });
+  return { meetingId, closedCount: snoozedTabIds.length };
 }
 
 export async function deactivateMeetingMode(): Promise<{ restoredCount: number }> {
@@ -39,6 +41,7 @@ export async function deactivateMeetingMode(): Promise<{ restoredCount: number }
   const meetingId = stored.meetingMode?.meetingId;
   if (!meetingId) return { restoredCount: 0 };
 
+  const placeholderTabIds: number[] = stored.meetingMode?.placeholderTabIds ?? [];
   const woken = await bulkWakeByMeetingId(meetingId);
 
   // Reopen all tabs (fall back if original window no longer exists)
@@ -51,6 +54,11 @@ export async function deactivateMeetingMode(): Promise<{ restoredCount: number }
     }
   }
 
-  await chrome.storage.local.set({ meetingMode: { active: false, meetingId: null } });
+  // Close the placeholder tabs that were keeping windows alive
+  for (const tabId of placeholderTabIds) {
+    try { await chrome.tabs.remove(tabId); } catch { /* tab may already be closed */ }
+  }
+
+  await chrome.storage.local.set({ meetingMode: { active: false, meetingId: null, placeholderTabIds: [] } });
   return { restoredCount: woken.length };
 }
