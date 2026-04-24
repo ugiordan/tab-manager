@@ -14,12 +14,19 @@ export const App: React.FC = () => {
 
   const [bridgeError, setBridgeError] = useState("");
 
+  const [thresholdError, setThresholdError] = useState("");
+
   const handleSave = () => {
     if (!isLocalhostUrl(config.bridgeUrl)) {
       setBridgeError("Bridge URL must point to localhost or 127.0.0.1");
       return;
     }
+    if (config.thresholds.warning >= config.thresholds.alert) {
+      setThresholdError("Warning threshold must be less than alert threshold");
+      return;
+    }
     setBridgeError("");
+    setThresholdError("");
     chrome.storage.local.set({ config });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -39,7 +46,9 @@ export const App: React.FC = () => {
 
           <FormGroup label="Alert threshold (tab count)" fieldId="alert">
             <TextInput type="number" id="alert" min={1} value={config.thresholds.alert}
-              onChange={(_e, val) => setConfig({ ...config, thresholds: { ...config.thresholds, alert: Math.max(1, parseInt(val) || 1) } })} />
+              validated={thresholdError ? "error" : "default"}
+              onChange={(_e, val) => { setThresholdError(""); setConfig({ ...config, thresholds: { ...config.thresholds, alert: Math.max(1, parseInt(val) || 1) } }); }} />
+            {thresholdError && <HelperText><HelperTextItem variant="error">{thresholdError}</HelperTextItem></HelperText>}
           </FormGroup>
 
           <FormGroup label="Stale tab threshold (minutes)" fieldId="stale">

@@ -47,7 +47,6 @@ export function statsRouter(context: AppContext): Router {
       staleTabs,
       topDomains,
       nextSnoozeWake: nextSnoozeWake === Infinity ? null : nextSnoozeWake,
-      queueDepth: queued.length,
       watchedChanges: watching.filter((t) => t.changedAt).length,
     };
 

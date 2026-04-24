@@ -4,6 +4,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 module.exports = {
+  devtool: false,
   entry: {
     "service-worker": "./src/background/service-worker.ts",
     popup: "./src/popup/index.tsx",

@@ -24,7 +24,7 @@ export const QueueList: React.FC<QueueListProps> = ({ tabs, onNext, onRemove }) 
       <div role="list">{sorted.map((tab, i) => (
         <div key={tab.id} role="listitem" tabIndex={0} style={{ display: "flex", alignItems: "center", padding: "4px 0", fontSize: 12 }}>
           <span style={{ color: "#6a6e73", marginRight: 8, fontSize: 11, width: 20 }}>{i + 1}.</span>
-          {tab.favIconUrl && <img src={tab.favIconUrl} style={{ width: 14, height: 14, marginRight: 4 }} />}
+          {tab.favIconUrl && <img src={tab.favIconUrl} alt="" style={{ width: 14, height: 14, marginRight: 4 }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />}
           <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {tab.title}
           </span>

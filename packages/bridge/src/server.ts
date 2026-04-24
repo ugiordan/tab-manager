@@ -56,6 +56,19 @@ async function start(): Promise<void> {
   const server = http.createServer(app);
   const wsManager = new WebSocketManager(server);
   context.broadcast = wsManager.broadcast.bind(wsManager);
+
+  // Extension is the source of truth for tab state. When it sends a
+  // state-sync message over WebSocket, update local storage accordingly.
+  wsManager.onSync(async (payload) => {
+    if (payload.activeTabs) context.storage.saveActiveTabs(payload.activeTabs);
+    if (payload.lifecycleTabs) {
+      await context.storage.replaceAllLifecycleTabs(payload.lifecycleTabs);
+    }
+  });
+
+  // Port auto-increment: the bridge tries ports sequentially if the default
+  // is taken. The extension discovers the port from the port file, so this
+  // works transparently. No filesystem-free discovery mechanism exists yet.
   const port = parseInt(process.env.PORT || "", 10) || DEFAULT_PORT;
 
   try {

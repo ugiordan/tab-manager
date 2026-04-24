@@ -18,6 +18,9 @@
   document.body.appendChild(tooltip);
   document.body.appendChild(overlay);
 
+  // Note: generated selectors may use class names that are unstable across
+  // page rebuilds (e.g. CSS modules hashes, Tailwind utilities). This is a
+  // known design limitation. Prefer ID-based selectors when available.
   function getCssSelector(el: Element): string {
     if (el.id) return `#${CSS.escape(el.id)}`;
     const parts: string[] = [];

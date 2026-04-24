@@ -30,7 +30,7 @@ export function lifecycleRouter(context: AppContext): Router {
     res.json({ tabs });
   });
 
-  router.post("/lifecycle/snooze", (req, res) => {
+  router.post("/lifecycle/snooze", async (req, res) => {
     const { url, title, favIconUrl, wakeAt, originWindowId } = req.body;
     if (!url) {
       res.status(400).json({ error: "url is required" });
@@ -40,7 +40,7 @@ export function lifecycleRouter(context: AppContext): Router {
       res.status(400).json({ error: "url must be http or https" });
       return;
     }
-    if (wakeAt !== undefined && (typeof wakeAt !== "number" || wakeAt < 0)) {
+    if (wakeAt !== undefined && (typeof wakeAt !== "number" || wakeAt <= 0)) {
       res.status(400).json({ error: "wakeAt must be a positive number" });
       return;
     }
@@ -51,17 +51,17 @@ export function lifecycleRouter(context: AppContext): Router {
       favIconUrl,
       state: "snoozed",
       createdAt: Date.now(),
-      originWindowId: originWindowId || 0,
+      originWindowId: originWindowId ?? 0,
       wakeAt,
     };
-    context.storage.saveLifecycleTab(tab);
+    await context.storage.saveLifecycleTab(tab);
     if (context.broadcast) {
       context.broadcast({ type: "state-change", payload: { action: "snooze", tab } });
     }
     res.status(201).json({ tab });
   });
 
-  router.post("/lifecycle/queue", (req, res) => {
+  router.post("/lifecycle/queue", async (req, res) => {
     const { url, title, favIconUrl, originWindowId } = req.body;
     if (!url) {
       res.status(400).json({ error: "url is required" });
@@ -80,17 +80,17 @@ export function lifecycleRouter(context: AppContext): Router {
       favIconUrl,
       state: "queued",
       createdAt: Date.now(),
-      originWindowId: originWindowId || 0,
+      originWindowId: originWindowId ?? 0,
       position: maxPosition + 1,
     };
-    context.storage.saveLifecycleTab(tab);
+    await context.storage.saveLifecycleTab(tab);
     if (context.broadcast) {
       context.broadcast({ type: "state-change", payload: { action: "queue", tab } });
     }
     res.status(201).json({ tab });
   });
 
-  router.post("/lifecycle/watch", (req, res) => {
+  router.post("/lifecycle/watch", async (req, res) => {
     const { url, title, favIconUrl, cssSelector, pollIntervalMinutes, originWindowId } = req.body;
     if (!url) {
       res.status(400).json({ error: "url is required" });
@@ -108,6 +108,7 @@ export function lifecycleRouter(context: AppContext): Router {
       res.status(400).json({ error: "cssSelector too long" });
       return;
     }
+    // cssSelector content validation happens at use time (in the extension's content script)
     const config = context.storage.getConfig();
     const tab: LifecycleTab = {
       id: randomUUID(),
@@ -116,39 +117,40 @@ export function lifecycleRouter(context: AppContext): Router {
       favIconUrl,
       state: "watching",
       createdAt: Date.now(),
-      originWindowId: originWindowId || 0,
+      originWindowId: originWindowId ?? 0,
       cssSelector,
       pollIntervalMinutes: pollIntervalMinutes || config.defaultPollIntervalMinutes,
     };
-    context.storage.saveLifecycleTab(tab);
+    await context.storage.saveLifecycleTab(tab);
     if (context.broadcast) {
       context.broadcast({ type: "state-change", payload: { action: "watch", tab } });
     }
     res.status(201).json({ tab });
   });
 
-  router.post("/lifecycle/:id/wake", (req, res) => {
+  router.post("/lifecycle/:id/wake", async (req, res) => {
     const { id } = req.params;
     const tab = context.storage.getLifecycleTab(id);
     if (!tab) {
       res.status(404).json({ error: "tab not found" });
       return;
     }
-    context.storage.removeLifecycleTab(id);
+    await context.storage.removeLifecycleTab(id);
     if (context.broadcast) {
       context.broadcast({ type: "state-change", payload: { action: "wake", tab } });
+      context.broadcast({ type: "command", payload: { command: "wake", lifecycleIds: [id] } });
     }
     res.json({ tab });
   });
 
-  router.delete("/lifecycle/:id", (req, res) => {
+  router.delete("/lifecycle/:id", async (req, res) => {
     const { id } = req.params;
     const tab = context.storage.getLifecycleTab(id);
     if (!tab) {
       res.status(404).json({ error: "tab not found" });
       return;
     }
-    context.storage.removeLifecycleTab(id);
+    await context.storage.removeLifecycleTab(id);
     if (context.broadcast) {
       context.broadcast({ type: "state-change", payload: { action: "remove", tab } });
     }

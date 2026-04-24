@@ -73,9 +73,23 @@ describe("BridgeClient", () => {
     expect(result.activeTabs).toBe(10);
   });
 
-  it("throws on non-ok response", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => "Internal Server Error" });
+  it("throws on non-ok response with error detail", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({ error: "internal server error" }) });
     vi.stubGlobal("fetch", mockFetch);
-    await expect(client.listTabs()).rejects.toThrow("Bridge returned 500");
+    await expect(client.listTabs()).rejects.toThrow("Bridge returned 500: internal server error");
+  });
+
+  it("throws on non-ok response without parseable body", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 502, json: async () => { throw new Error("not json"); } });
+    vi.stubGlobal("fetch", mockFetch);
+    await expect(client.listTabs()).rejects.toThrow("Bridge returned 502");
+  });
+
+  it("remove calls DELETE /lifecycle/:id", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ removed: true }) });
+    vi.stubGlobal("fetch", mockFetch);
+    const result = await client.remove("x");
+    expect(result.removed).toBe(true);
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining("/lifecycle/x"), expect.objectContaining({ method: "DELETE" }));
   });
 });

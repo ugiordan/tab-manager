@@ -62,50 +62,66 @@ describe("Storage", () => {
   });
 
   describe("lifecycle tabs", () => {
-    it("saves and retrieves a lifecycle tab", () => {
+    it("saves and retrieves a lifecycle tab", async () => {
       const tab = makeLifecycleTab();
-      storage.saveLifecycleTab(tab);
+      await storage.saveLifecycleTab(tab);
       const loaded = storage.getLifecycleTab("test-uuid-1");
       expect(loaded).not.toBeNull();
       expect(loaded!.url).toBe("https://example.com");
       expect(loaded!.state).toBe("snoozed");
     });
 
-    it("lists all lifecycle tabs", () => {
-      storage.saveLifecycleTab(makeLifecycleTab({ id: "a", state: "snoozed" }));
-      storage.saveLifecycleTab(makeLifecycleTab({ id: "b", state: "queued" }));
-      storage.saveLifecycleTab(makeLifecycleTab({ id: "c", state: "watching" }));
+    it("lists all lifecycle tabs", async () => {
+      await storage.saveLifecycleTab(makeLifecycleTab({ id: "a", state: "snoozed" }));
+      await storage.saveLifecycleTab(makeLifecycleTab({ id: "b", state: "queued" }));
+      await storage.saveLifecycleTab(makeLifecycleTab({ id: "c", state: "watching" }));
       const all = storage.listLifecycleTabs();
       expect(all).toHaveLength(3);
     });
 
-    it("filters lifecycle tabs by state", () => {
-      storage.saveLifecycleTab(makeLifecycleTab({ id: "a", state: "snoozed" }));
-      storage.saveLifecycleTab(makeLifecycleTab({ id: "b", state: "queued" }));
-      storage.saveLifecycleTab(makeLifecycleTab({ id: "c", state: "snoozed" }));
+    it("filters lifecycle tabs by state", async () => {
+      await storage.saveLifecycleTab(makeLifecycleTab({ id: "a", state: "snoozed" }));
+      await storage.saveLifecycleTab(makeLifecycleTab({ id: "b", state: "queued" }));
+      await storage.saveLifecycleTab(makeLifecycleTab({ id: "c", state: "snoozed" }));
       const snoozed = storage.listLifecycleTabs("snoozed");
       expect(snoozed).toHaveLength(2);
       expect(snoozed.every((t) => t.state === "snoozed")).toBe(true);
     });
 
-    it("removes a lifecycle tab", () => {
-      storage.saveLifecycleTab(makeLifecycleTab({ id: "to-remove" }));
+    it("removes a lifecycle tab", async () => {
+      await storage.saveLifecycleTab(makeLifecycleTab({ id: "to-remove" }));
       expect(storage.getLifecycleTab("to-remove")).not.toBeNull();
-      const removed = storage.removeLifecycleTab("to-remove");
+      const removed = await storage.removeLifecycleTab("to-remove");
       expect(removed).toBe(true);
       expect(storage.getLifecycleTab("to-remove")).toBeNull();
     });
 
-    it("returns false when removing nonexistent tab", () => {
-      expect(storage.removeLifecycleTab("nope")).toBe(false);
+    it("returns false when removing nonexistent tab", async () => {
+      expect(await storage.removeLifecycleTab("nope")).toBe(false);
     });
 
-    it("updates a lifecycle tab in place", () => {
-      storage.saveLifecycleTab(makeLifecycleTab({ id: "upd", state: "snoozed", wakeAt: 1000 }));
-      storage.saveLifecycleTab(makeLifecycleTab({ id: "upd", state: "snoozed", wakeAt: 2000 }));
+    it("updates a lifecycle tab in place", async () => {
+      await storage.saveLifecycleTab(makeLifecycleTab({ id: "upd", state: "snoozed", wakeAt: 1000 }));
+      await storage.saveLifecycleTab(makeLifecycleTab({ id: "upd", state: "snoozed", wakeAt: 2000 }));
       const loaded = storage.getLifecycleTab("upd");
       expect(loaded!.wakeAt).toBe(2000);
       expect(storage.listLifecycleTabs()).toHaveLength(1);
+    });
+
+    it("bulk saves lifecycle tabs", async () => {
+      await storage.bulkSaveLifecycleTabs([
+        makeLifecycleTab({ id: "x", state: "snoozed" }),
+        makeLifecycleTab({ id: "y", state: "queued" }),
+      ]);
+      expect(storage.listLifecycleTabs()).toHaveLength(2);
+    });
+
+    it("replaces all lifecycle tabs", async () => {
+      await storage.saveLifecycleTab(makeLifecycleTab({ id: "old" }));
+      await storage.replaceAllLifecycleTabs([makeLifecycleTab({ id: "new" })]);
+      const all = storage.listLifecycleTabs();
+      expect(all).toHaveLength(1);
+      expect(all[0].id).toBe("new");
     });
   });
 

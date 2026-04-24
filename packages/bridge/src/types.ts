@@ -1,6 +1,7 @@
 export interface ActiveTab {
   id: number;
   windowId: number;
+  groupId?: number;  // Chrome tab group ID
   url: string;
   title: string;
   favIconUrl?: string;
@@ -67,7 +68,6 @@ export interface LifecycleStats {
   staleTabs: number;
   topDomains: { domain: string; count: number }[];
   nextSnoozeWake: number | null;
-  queueDepth: number;
   watchedChanges: number;
 }
 

@@ -27,8 +27,8 @@ export async function handleAlarm(alarm: chrome.alarms.Alarm): Promise<void> {
       await notifySnoozeWake(tab);
       const stored = await chrome.storage.local.get("attention");
       const attention = stored.attention ?? { snoozesWoken: [], watchesChanged: [] };
-      attention.snoozesWoken = attention.snoozesWoken.slice(-MAX_ATTENTION_ITEMS);
       attention.snoozesWoken.push(tab.id);
+      attention.snoozesWoken = attention.snoozesWoken.slice(-MAX_ATTENTION_ITEMS);
       await chrome.storage.local.set({ attention });
     }
     return;
@@ -57,8 +57,8 @@ export async function handleAlarm(alarm: chrome.alarms.Alarm): Promise<void> {
           await notifyWatchChange(tab);
           const stored = await chrome.storage.local.get("attention");
           const attention = stored.attention ?? { snoozesWoken: [], watchesChanged: [] };
-          attention.watchesChanged = attention.watchesChanged.slice(-MAX_ATTENTION_ITEMS);
           attention.watchesChanged.push(tab.id);
+          attention.watchesChanged = attention.watchesChanged.slice(-MAX_ATTENTION_ITEMS);
           await chrome.storage.local.set({ attention });
         }
       }

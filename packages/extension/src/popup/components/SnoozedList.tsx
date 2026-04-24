@@ -26,7 +26,7 @@ export const SnoozedList: React.FC<SnoozedListProps> = ({ tabs, onWake, onRemove
 
         return (
           <div key={tab.id} role="listitem" tabIndex={0} style={{ display: "flex", alignItems: "center", padding: "4px 0", fontSize: 12 }}>
-            {tab.favIconUrl && <img src={tab.favIconUrl} style={{ width: 14, height: 14, marginRight: 4 }} />}
+            {tab.favIconUrl && <img src={tab.favIconUrl} alt="" style={{ width: 14, height: 14, marginRight: 4 }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />}
             <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {tab.title}
             </span>

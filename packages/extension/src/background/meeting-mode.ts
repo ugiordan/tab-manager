@@ -17,9 +17,12 @@ export async function activateMeetingMode(): Promise<{ meetingId: string; closed
     await chrome.tabs.create({ windowId, url: "chrome://newtab", active: true });
   }
 
-  // Close the snoozed tabs
-  const tabIds = allTabs.map((t) => t.id!).filter(Boolean);
-  if (tabIds.length > 0) await chrome.tabs.remove(tabIds);
+  // Close only the tabs that were actually snoozed, not all non-pinned tabs
+  const snoozedTabIds = allTabs
+    .filter((t) => t.id && t.url && isAllowedUrl(t.url))
+    .map((t) => t.id!)
+    .filter(Boolean);
+  if (snoozedTabIds.length > 0) await chrome.tabs.remove(snoozedTabIds);
 
   // Update badge
   const remaining = await chrome.tabs.query({});

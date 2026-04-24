@@ -33,7 +33,6 @@ describe("stats route", () => {
     expect(res.body.queuedTabs).toBe(1);
     expect(res.body.watchingTabs).toBe(1);
     expect(res.body.staleTabs).toBe(1);
-    expect(res.body.queueDepth).toBe(1);
     expect(res.body.watchedChanges).toBe(1);
     expect(res.body.nextSnoozeWake).toBeDefined();
     expect(res.body.topDomains).toBeDefined();

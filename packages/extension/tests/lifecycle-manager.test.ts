@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { resetChromeStorage, getStorageData, getAlarms } from "./setup.js";
 import {
   snoozeTab, queueTab, watchTab, wakeTab, removeTab,
-  getNextQueuedTab, listByState, updateWatchStatus,
+  getNextQueuedTab, wakeNextQueued, listByState, updateWatchStatus,
   bulkSnooze, bulkWakeByMeetingId, reorderQueue,
 } from "../src/background/lifecycle-manager.js";
 
@@ -111,6 +111,32 @@ describe("getNextQueuedTab", () => {
 
   it("returns null when queue is empty", async () => {
     expect(await getNextQueuedTab()).toBeNull();
+  });
+});
+
+describe("wakeNextQueued", () => {
+  it("atomically removes and returns the next queued tab", async () => {
+    await queueTab("https://a.com", "A", undefined, 1);
+    await queueTab("https://b.com", "B", undefined, 1);
+    const next = await wakeNextQueued();
+    expect(next).not.toBeNull();
+    expect(next!.url).toBe("https://a.com");
+
+    // Tab should be removed from storage
+    const stored = getStorageData().lifecycle;
+    expect(stored).toHaveLength(1);
+    expect(stored[0].url).toBe("https://b.com");
+  });
+
+  it("returns null when queue is empty", async () => {
+    expect(await wakeNextQueued()).toBeNull();
+  });
+
+  it("does not remove non-queued tabs", async () => {
+    await snoozeTab("https://a.com", "A", undefined, 1, 9999);
+    const next = await wakeNextQueued();
+    expect(next).toBeNull();
+    expect(getStorageData().lifecycle).toHaveLength(1);
   });
 });
 

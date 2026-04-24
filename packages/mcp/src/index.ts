@@ -26,7 +26,7 @@ try {
 const server = new McpServer({ name: "tab-lifecycle-manager", version: "0.1.0" });
 const client = new BridgeClient(BRIDGE_URL);
 
-function wrapTool<T>(handler: (client: BridgeClient, args: T) => Promise<any>) {
+function wrapTool<T = void>(handler: (client: BridgeClient, args: T) => Promise<any>) {
   return async (args: T) => {
     try {
       return await handler(client, args);
@@ -78,15 +78,11 @@ server.tool("tabs_meeting", "Start or end meeting mode (bulk snooze/wake non-pin
   meeting_id: z.string().optional().describe("Meeting ID to end (from start response)"),
 }, wrapTool(handleTabsMeeting));
 
-server.tool("tabs_stats", "Get tab statistics with lifecycle breakdown", async () => {
-  try { return await handleTabsStats(client); }
-  catch (err) { return { content: [{ type: "text" as const, text: `Error: Bridge not reachable. Details: ${(err as Error).message}` }], isError: true }; }
-});
+server.tool("tabs_stats", "Get tab statistics with lifecycle breakdown", {},
+  wrapTool<Record<string, never>>((client) => handleTabsStats(client)));
 
-server.tool("tabs_suggest", "Analyze tabs and suggest snooze/queue/watch actions", async () => {
-  try { return await handleTabsSuggest(client); }
-  catch (err) { return { content: [{ type: "text" as const, text: `Error: Bridge not reachable. Details: ${(err as Error).message}` }], isError: true }; }
-});
+server.tool("tabs_suggest", "Analyze tabs and suggest snooze/queue/watch actions", {},
+  wrapTool<Record<string, never>>((client) => handleTabsSuggest(client)));
 
 async function main() {
   const transport = new StdioServerTransport();

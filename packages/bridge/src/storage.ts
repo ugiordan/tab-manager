@@ -6,12 +6,22 @@ export class Storage {
   private lifecyclePath: string;
   private configPath: string;
   private activeTabsPath: string;
+  private lifecycleMutex: Promise<void> = Promise.resolve();
 
   constructor(private baseDir: string) {
     fs.mkdirSync(baseDir, { recursive: true });
     this.lifecyclePath = path.join(baseDir, "lifecycle.json");
     this.configPath = path.join(baseDir, "config.json");
     this.activeTabsPath = path.join(baseDir, "active-tabs.json");
+  }
+
+  private withLifecycleMutex<T>(fn: () => T): Promise<T> {
+    let release: () => void;
+    const prev = this.lifecycleMutex;
+    this.lifecycleMutex = new Promise<void>((r) => { release = r; });
+    return prev.then(() => {
+      try { const result = fn(); return result; } finally { release!(); }
+    });
   }
 
   getConfig(): Config {
@@ -42,15 +52,32 @@ export class Storage {
     fs.writeFileSync(this.lifecyclePath, JSON.stringify(tabs, null, 2));
   }
 
-  saveLifecycleTab(tab: LifecycleTab): void {
-    const tabs = this.readLifecycleStore();
-    const idx = tabs.findIndex((t) => t.id === tab.id);
-    if (idx >= 0) {
-      tabs[idx] = tab;
-    } else {
-      tabs.push(tab);
-    }
-    this.writeLifecycleStore(tabs);
+  saveLifecycleTab(tab: LifecycleTab): Promise<void> {
+    return this.withLifecycleMutex(() => {
+      const tabs = this.readLifecycleStore();
+      const idx = tabs.findIndex((t) => t.id === tab.id);
+      if (idx >= 0) {
+        tabs[idx] = tab;
+      } else {
+        tabs.push(tab);
+      }
+      this.writeLifecycleStore(tabs);
+    });
+  }
+
+  bulkSaveLifecycleTabs(newTabs: LifecycleTab[]): Promise<void> {
+    return this.withLifecycleMutex(() => {
+      const tabs = this.readLifecycleStore();
+      for (const tab of newTabs) {
+        const idx = tabs.findIndex((t) => t.id === tab.id);
+        if (idx >= 0) {
+          tabs[idx] = tab;
+        } else {
+          tabs.push(tab);
+        }
+      }
+      this.writeLifecycleStore(tabs);
+    });
   }
 
   getLifecycleTab(id: string): LifecycleTab | null {
@@ -64,12 +91,20 @@ export class Storage {
     return tabs;
   }
 
-  removeLifecycleTab(id: string): boolean {
-    const tabs = this.readLifecycleStore();
-    const filtered = tabs.filter((t) => t.id !== id);
-    if (filtered.length === tabs.length) return false;
-    this.writeLifecycleStore(filtered);
-    return true;
+  removeLifecycleTab(id: string): Promise<boolean> {
+    return this.withLifecycleMutex(() => {
+      const tabs = this.readLifecycleStore();
+      const filtered = tabs.filter((t) => t.id !== id);
+      if (filtered.length === tabs.length) return false;
+      this.writeLifecycleStore(filtered);
+      return true;
+    });
+  }
+
+  replaceAllLifecycleTabs(newTabs: LifecycleTab[]): Promise<void> {
+    return this.withLifecycleMutex(() => {
+      this.writeLifecycleStore(newTabs);
+    });
   }
 
   saveActiveTabs(tabs: ActiveTab[]): void {

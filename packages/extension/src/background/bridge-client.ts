@@ -1,10 +1,14 @@
 import { DEFAULT_EXTENSION_CONFIG, TrackedTab, LifecycleTab, isLocalhostUrl, isAllowedUrl } from "../types.js";
 import { wakeTab } from "./lifecycle-manager.js";
+import { activateMeetingMode, deactivateMeetingMode } from "./meeting-mode.js";
 
 let ws: WebSocket | null = null;
 let reconnectDelay = 5000;
 const MAX_RECONNECT_DELAY = 300000; // 5 minutes
 
+// setTimeout survives within a single service worker lifetime, which is
+// sufficient for a best-effort bridge connection. Using chrome.alarms
+// would be overkill here since the bridge is optional infrastructure.
 function scheduleReconnect(): void {
   setTimeout(connectWebSocket, reconnectDelay);
   reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
@@ -41,7 +45,9 @@ export async function connectWebSocket(): Promise<void> {
 }
 
 async function handleBridgeCommand(payload: any): Promise<void> {
-  if (payload.command === "wake" && payload.lifecycleIds) {
+  const { command } = payload;
+
+  if (command === "wake" && payload.lifecycleIds) {
     for (const id of payload.lifecycleIds) {
       const tab = await wakeTab(id);
       if (tab && isAllowedUrl(tab.url)) {
@@ -52,6 +58,17 @@ async function handleBridgeCommand(payload: any): Promise<void> {
         }
       }
     }
+    return;
+  }
+
+  if (command === "meeting-start") {
+    await activateMeetingMode();
+    return;
+  }
+
+  if (command === "meeting-end" && payload.meetingId) {
+    await deactivateMeetingMode();
+    return;
   }
 }
 
@@ -72,8 +89,14 @@ export async function isBridgeAvailable(): Promise<boolean> {
   try {
     const bridgeUrl = await getBridgeUrl();
     if (!bridgeUrl) return false;
-    const response = await fetch(`${bridgeUrl}/health`);
-    return response.ok;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    try {
+      const response = await fetch(`${bridgeUrl}/health`, { signal: controller.signal });
+      return response.ok;
+    } finally {
+      clearTimeout(timer);
+    }
   } catch {
     return false;
   }

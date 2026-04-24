@@ -60,12 +60,12 @@ export function handleContextMenuClick(
 
   if (menuId.startsWith("snooze-")) {
     const wakeAt = getSnoozeWakeTime(menuId);
-    snoozeTab(tab.url, tab.title, tab.favIconUrl, tab.windowId, wakeAt).then(() => {
-      chrome.tabs.remove(tab.id!);
+    snoozeTab(tab.url, tab.title, tab.favIconUrl, tab.windowId, wakeAt).then(async () => {
+      try { await chrome.tabs.remove(tab.id!); } catch { /* tab may already be closed */ }
     }).catch((err) => console.error("Snooze failed:", err));
   } else if (menuId === "queue-tab") {
-    queueTab(tab.url, tab.title, tab.favIconUrl, tab.windowId).then(() => {
-      chrome.tabs.remove(tab.id!);
+    queueTab(tab.url, tab.title, tab.favIconUrl, tab.windowId).then(async () => {
+      try { await chrome.tabs.remove(tab.id!); } catch { /* tab may already be closed */ }
     }).catch((err) => console.error("Queue failed:", err));
   } else if (menuId === "watch-tab") {
     // Inject element selector content script

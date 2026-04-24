@@ -28,4 +28,11 @@ describe("tabs-meeting tool", () => {
     expect(result.content[0].text).toContain("Meeting mode ended");
     expect(result.content[0].text).toContain("Woke 10");
   });
+
+  it("returns error when ending without meeting_id", async () => {
+    const client = {} as unknown as BridgeClient;
+    const result = await handleTabsMeeting(client, { action: "end" });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("meeting_id is required");
+  });
 });

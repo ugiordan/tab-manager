@@ -5,7 +5,7 @@ export async function handleTabsStats(client: BridgeClient) {
   const lines = [
     `Active tabs: ${stats.activeTabs}`,
     `Snoozed: ${stats.snoozedTabs}`,
-    `Queued: ${stats.queuedTabs} (depth: ${stats.queueDepth})`,
+    `Queued: ${stats.queuedTabs}`,
     `Watching: ${stats.watchingTabs} (${stats.watchedChanges} with changes)`,
     `Stale (2h+ idle): ${stats.staleTabs}`,
   ];

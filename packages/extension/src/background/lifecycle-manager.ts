@@ -4,7 +4,11 @@ function generateId(): string {
   return crypto.randomUUID();
 }
 
-// Mutex to prevent concurrent read-modify-write races
+// Mutex to prevent concurrent read-modify-write races within a single
+// service worker lifetime. Note: this resets when the MV3 service worker
+// terminates and restarts. The practical risk is low because
+// chrome.storage.local.set is itself atomic for individual operations,
+// and the mutex only guards read-modify-write sequences within one session.
 let mutexPromise: Promise<void> = Promise.resolve();
 
 async function withMutex<T>(fn: () => Promise<T>): Promise<T> {
@@ -108,6 +112,20 @@ export async function getNextQueuedTab(): Promise<LifecycleTab | null> {
   const tabs = await getLifecycleTabs();
   const queued = tabs.filter((t) => t.state === "queued").sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   return queued[0] ?? null;
+}
+
+export async function wakeNextQueued(): Promise<LifecycleTab | null> {
+  return withMutex(async () => {
+    const tabs = await getLifecycleTabs();
+    const queued = tabs.filter((t) => t.state === "queued").sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    if (queued.length === 0) return null;
+    const target = queued[0];
+    const idx = tabs.findIndex((t) => t.id === target.id);
+    if (idx < 0) return null;
+    tabs.splice(idx, 1);
+    await saveLifecycleTabs(tabs);
+    return target;
+  });
 }
 
 export async function listByState(state?: LifecycleState): Promise<LifecycleTab[]> {

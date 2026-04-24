@@ -15,6 +15,10 @@ export function tabsRouter(context: AppContext): Router {
       res.status(400).json({ error: "tabs must be an array" });
       return;
     }
+    if (tabs.length > 5000) {
+      res.status(400).json({ error: "too many tabs" });
+      return;
+    }
     const valid = tabs.every((t: any) => typeof t.url === "string" && typeof t.title === "string" && typeof t.id === "number");
     if (!valid) {
       res.status(400).json({ error: "invalid tab data" });

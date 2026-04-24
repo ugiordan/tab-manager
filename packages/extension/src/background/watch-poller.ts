@@ -8,74 +8,22 @@ async function hashString(str: string): Promise<string> {
   return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function extractViaContentScript(
+async function extractViaFetch(
   url: string,
   cssSelector: string,
-  lifecycleId: string
 ): Promise<{ content: string | null; error: string | null }> {
-  // Open the page in a background tab, inject content script to extract element
   if (!isAllowedUrl(url)) return { content: null, error: "URL not allowed" };
-  let tabId: number | undefined;
   try {
-    const tab = await chrome.tabs.create({ url, active: false });
-    tabId = tab.id;
-    if (!tabId) return { content: null, error: "Failed to create tab" };
-
-    // Wait for the tab to finish loading
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        chrome.tabs.onUpdated.removeListener(listener);
-        reject(new Error("Tab load timeout"));
-      }, 10000);
-
-      function listener(updatedTabId: number, info: chrome.tabs.TabChangeInfo) {
-        if (updatedTabId === tabId && info.status === "complete") {
-          chrome.tabs.onUpdated.removeListener(listener);
-          clearTimeout(timeout);
-          resolve();
-        }
-      }
-      chrome.tabs.onUpdated.addListener(listener);
-    });
-
-    // Inject params then the extraction script
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      func: (selector: string, id: string) => {
-        (globalThis as any).__tlm_extractElementParams = { selector, lifecycleId: id };
-      },
-      args: [cssSelector, lifecycleId],
-    });
-
-    // Collect the result via a one-shot message listener
-    const result = await new Promise<{ content: string | null; error: string | null }>((resolve) => {
-      const timeout = setTimeout(() => {
-        chrome.runtime.onMessage.removeListener(listener);
-        resolve({ content: null, error: "Extraction timeout" });
-      }, 5000);
-
-      function listener(message: any) {
-        if (message.type === "WATCH_EXTRACT_RESULT" && message.lifecycleId === lifecycleId) {
-          chrome.runtime.onMessage.removeListener(listener);
-          clearTimeout(timeout);
-          resolve({ content: message.content, error: message.error });
-        }
-      }
-      chrome.runtime.onMessage.addListener(listener);
-
-      chrome.scripting.executeScript({
-        target: { tabId: tabId! },
-        files: ["content/extract-element.js"],
-      });
-    });
-
-    return result;
+    const response = await fetch(url);
+    if (!response.ok) return { content: null, error: `HTTP ${response.status}` };
+    const html = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const el = doc.querySelector(cssSelector);
+    if (!el) return { content: null, error: "Element not found" };
+    return { content: el.textContent ?? "", error: null };
   } catch (err) {
     return { content: null, error: (err as Error).message };
-  } finally {
-    if (tabId) {
-      try { await chrome.tabs.remove(tabId); } catch { /* tab may already be closed */ }
-    }
   }
 }
 
@@ -96,7 +44,7 @@ export async function pollWatchedTabs(): Promise<{ tabId: string; changed: boole
   }).slice(0, MAX_POLLS_PER_CYCLE);
 
   for (const tab of eligible) {
-    const { content, error } = await extractViaContentScript(tab.url, tab.cssSelector!, tab.id);
+    const { content, error } = await extractViaFetch(tab.url, tab.cssSelector!);
 
     if (error || content === null) {
       const errorCount = tab.lastContentHash?.startsWith("error:")

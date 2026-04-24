@@ -4,7 +4,7 @@ import { setupAlarms, handleAlarm } from "./alarm-handler.js";
 import { connectWebSocket } from "./bridge-client.js";
 import { setupContextMenus, handleContextMenuClick } from "./context-menu.js";
 import { activateMeetingMode, deactivateMeetingMode } from "./meeting-mode.js";
-import { wakeTab, getNextQueuedTab, listByState, watchTab, reorderQueue, removeTab, snoozeTab, queueTab } from "./lifecycle-manager.js";
+import { wakeTab, getNextQueuedTab, wakeNextQueued, listByState, watchTab, reorderQueue, removeTab, snoozeTab, queueTab } from "./lifecycle-manager.js";
 import { clearAttention } from "./badge-manager.js";
 import { DEFAULT_EXTENSION_CONFIG, isAllowedUrl } from "../types.js";
 
@@ -73,9 +73,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === "QUEUE_NEXT") {
-    getNextQueuedTab().then(async (tab) => {
+    wakeNextQueued().then(async (tab) => {
       if (tab && isAllowedUrl(tab.url)) {
-        await wakeTab(tab.id);
         await chrome.tabs.create({ url: tab.url });
         sendResponse({ opened: true, tab });
       } else {
@@ -130,8 +129,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { tabId, url, title, favIconUrl, windowId, wakeAt } = message;
     if (!isAllowedUrl(url)) { sendResponse({ snoozed: false }); return true; }
     snoozeTab(url, title, favIconUrl, windowId, wakeAt).then(async () => {
-      await chrome.tabs.remove(tabId);
       sendResponse({ snoozed: true });
+      try { await chrome.tabs.remove(tabId); } catch { /* tab may already be closed */ }
     }).catch(() => sendResponse({ snoozed: false }));
     return true;
   }
@@ -139,8 +138,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { tabId, url, title, favIconUrl, windowId } = message;
     if (!isAllowedUrl(url)) { sendResponse({ queued: false }); return true; }
     queueTab(url, title, favIconUrl, windowId).then(async () => {
-      await chrome.tabs.remove(tabId);
       sendResponse({ queued: true });
+      try { await chrome.tabs.remove(tabId); } catch { /* tab may already be closed */ }
     }).catch(() => sendResponse({ queued: false }));
     return true;
   }

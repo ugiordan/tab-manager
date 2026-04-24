@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@patternfly/react-core";
 import type { TrackedTab } from "../../types.js";
+import { isAllowedUrl } from "../../types.js";
 import { TabActions } from "./TabActions.js";
 import { SnoozeDialog } from "./SnoozeDialog.js";
 
@@ -49,11 +50,12 @@ export const ActiveTabList: React.FC<ActiveTabListProps> = ({ tabs, onMeetingMod
   };
 
   const handleWatch = (tabId: number) => {
-    // Trigger element selector on the tab
+    const tab = tabs.find((t) => t.id === tabId);
+    if (!tab || !isAllowedUrl(tab.url)) return;
     chrome.scripting.executeScript({
       target: { tabId },
       files: ["content/element-selector.js"],
-    }).then(() => onRefresh?.()).catch(() => {});
+    }).then(() => onRefresh?.()).catch((err) => console.error("Watch injection failed:", err));
   };
 
   return (
@@ -71,7 +73,7 @@ export const ActiveTabList: React.FC<ActiveTabListProps> = ({ tabs, onMeetingMod
           <div style={{ fontSize: 11, color: "#6a6e73", marginBottom: 4 }}>{windowLabel(Number(windowId))} ({windowTabs.length} tabs)</div>
           {windowTabs.map((tab) => (
             <div key={tab.id} role="listitem" tabIndex={0} style={{ display: "flex", alignItems: "center", padding: "2px 0", fontSize: 12 }}>
-              {tab.favIconUrl && <img src={tab.favIconUrl} style={{ width: 14, height: 14, marginRight: 4 }} />}
+              {tab.favIconUrl && <img src={tab.favIconUrl} alt="" style={{ width: 14, height: 14, marginRight: 4 }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />}
               <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {tab.pinned ? "[P] " : ""}{tab.title}
               </span>
