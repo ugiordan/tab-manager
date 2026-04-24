@@ -5,41 +5,38 @@ Tab Lifecycle Manager is a monorepo with three packages that work together but a
 ## System Diagram
 
 ```mermaid
-graph TB
-    subgraph Chrome["Chrome Browser"]
-        SW["Service Worker<br/>(background)"]
-        Popup["Popup UI<br/>(React + PatternFly)"]
-        Options["Options Page"]
-        CS["Content Scripts<br/>(element selector, extractor)"]
-        Storage["Chrome Storage<br/>(primary state)"]
-    end
-
-    subgraph Bridge["Bridge Server (localhost)"]
-        Express["Express API"]
-        WS["WebSocket Server"]
-        FS["JSON File Storage<br/>(~/.tab-manager/)"]
-    end
-
-    subgraph MCP["MCP Plugin"]
-        Tools["9 MCP Tools"]
-        Client["Bridge HTTP Client"]
-    end
-
+graph LR
     subgraph Claude["Claude Code"]
         AI["AI Agent"]
     end
 
+    subgraph MCP["MCP Plugin"]
+        Tools["9 MCP Tools"]
+        Client["HTTP Client"]
+    end
+
+    subgraph Bridge["Bridge Server"]
+        Express["Express API"]
+        WS["WebSocket"]
+        FS["JSON Storage"]
+    end
+
+    subgraph Chrome["Chrome Browser"]
+        SW["Service Worker"]
+        Popup["Popup UI"]
+        CS["Content Scripts"]
+        Storage["Chrome Storage"]
+    end
+
+    AI -->|tool calls| Tools
+    Tools --> Client
+    Client -->|HTTP| Express
+    Express <-->|read/write| FS
+    WS <-->|commands| SW
+    SW -->|HTTP sync| Express
     Popup <-->|messages| SW
-    Options -->|config| Storage
     CS -->|element data| SW
     SW <-->|read/write| Storage
-    SW <-->|WebSocket| WS
-    SW -->|HTTP sync| Express
-    Express <-->|read/write| FS
-    WS -->|commands| SW
-    Client -->|HTTP| Express
-    Tools --> Client
-    AI -->|tool calls| Tools
 ```
 
 ## Data Flow
