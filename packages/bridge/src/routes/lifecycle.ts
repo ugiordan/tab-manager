@@ -128,6 +128,42 @@ export function lifecycleRouter(context: AppContext): Router {
     res.status(201).json({ tab });
   });
 
+  router.post("/lifecycle/wake-batch", async (req, res) => {
+    const { state, ids } = req.body;
+    if (state !== undefined && !VALID_STATES.includes(state)) {
+      res.status(400).json({ error: "invalid state" });
+      return;
+    }
+    if (ids !== undefined && (!Array.isArray(ids) || ids.length === 0)) {
+      res.status(400).json({ error: "ids must be a non-empty array" });
+      return;
+    }
+
+    let toWake: LifecycleTab[];
+    if (ids) {
+      toWake = ids
+        .map((id: string) => context.storage.getLifecycleTab(id))
+        .filter((t): t is LifecycleTab => t !== undefined);
+    } else {
+      toWake = context.storage.listLifecycleTabs(state);
+    }
+
+    if (toWake.length === 0) {
+      res.json({ wokenCount: 0, tabs: [] });
+      return;
+    }
+
+    for (const tab of toWake) {
+      await context.storage.removeLifecycleTab(tab.id);
+    }
+
+    if (context.broadcast) {
+      context.broadcast({ type: "state-change", payload: { action: "wake", tabs: toWake } });
+      context.broadcast({ type: "command", payload: { command: "wake", lifecycleIds: toWake.map(t => t.id) } });
+    }
+    res.json({ wokenCount: toWake.length, tabs: toWake });
+  });
+
   router.post("/lifecycle/:id/wake", async (req, res) => {
     const { id } = req.params;
     const tab = context.storage.getLifecycleTab(id);

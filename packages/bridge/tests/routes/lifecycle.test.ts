@@ -147,6 +147,69 @@ describe("lifecycle routes", () => {
     expect(res.status).toBe(404);
   });
 
+  it("POST /lifecycle/wake-batch wakes all tabs when no filter given", async () => {
+    await request(app).post("/lifecycle/snooze").send({
+      url: "https://a.com", title: "A", wakeAt: Date.now() + 3600000, originWindowId: 1,
+    });
+    await request(app).post("/lifecycle/queue").send({
+      url: "https://b.com", title: "B", originWindowId: 1,
+    });
+    const res = await request(app).post("/lifecycle/wake-batch").send({});
+    expect(res.status).toBe(200);
+    expect(res.body.wokenCount).toBe(2);
+    expect(res.body.tabs).toHaveLength(2);
+    const listRes = await request(app).get("/lifecycle");
+    expect(listRes.body.tabs).toHaveLength(0);
+  });
+
+  it("POST /lifecycle/wake-batch filters by state", async () => {
+    await request(app).post("/lifecycle/snooze").send({
+      url: "https://a.com", title: "A", wakeAt: Date.now() + 3600000, originWindowId: 1,
+    });
+    await request(app).post("/lifecycle/queue").send({
+      url: "https://b.com", title: "B", originWindowId: 1,
+    });
+    const res = await request(app).post("/lifecycle/wake-batch").send({ state: "snoozed" });
+    expect(res.status).toBe(200);
+    expect(res.body.wokenCount).toBe(1);
+    expect(res.body.tabs[0].url).toBe("https://a.com");
+    const listRes = await request(app).get("/lifecycle");
+    expect(listRes.body.tabs).toHaveLength(1);
+    expect(listRes.body.tabs[0].state).toBe("queued");
+  });
+
+  it("POST /lifecycle/wake-batch wakes specific ids", async () => {
+    const r1 = await request(app).post("/lifecycle/snooze").send({
+      url: "https://a.com", title: "A", wakeAt: Date.now() + 3600000, originWindowId: 1,
+    });
+    await request(app).post("/lifecycle/snooze").send({
+      url: "https://b.com", title: "B", wakeAt: Date.now() + 3600000, originWindowId: 1,
+    });
+    const res = await request(app).post("/lifecycle/wake-batch").send({ ids: [r1.body.tab.id] });
+    expect(res.status).toBe(200);
+    expect(res.body.wokenCount).toBe(1);
+    const listRes = await request(app).get("/lifecycle");
+    expect(listRes.body.tabs).toHaveLength(1);
+    expect(listRes.body.tabs[0].url).toBe("https://b.com");
+  });
+
+  it("POST /lifecycle/wake-batch returns empty when nothing matches", async () => {
+    const res = await request(app).post("/lifecycle/wake-batch").send({ state: "snoozed" });
+    expect(res.status).toBe(200);
+    expect(res.body.wokenCount).toBe(0);
+    expect(res.body.tabs).toHaveLength(0);
+  });
+
+  it("POST /lifecycle/wake-batch rejects invalid state", async () => {
+    const res = await request(app).post("/lifecycle/wake-batch").send({ state: "invalid" });
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /lifecycle/wake-batch rejects empty ids array", async () => {
+    const res = await request(app).post("/lifecycle/wake-batch").send({ ids: [] });
+    expect(res.status).toBe(400);
+  });
+
   it("DELETE /lifecycle/:id removes tab", async () => {
     const createRes = await request(app).post("/lifecycle/queue").send({
       url: "https://example.com",
