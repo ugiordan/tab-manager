@@ -1,30 +1,38 @@
 import { snoozeTab, queueTab } from "./lifecycle-manager.js";
 import { DEFAULT_EXTENSION_CONFIG, isAllowedUrl } from "../types.js";
 
+let menuSetupInProgress = false;
+
 export async function setupContextMenus(): Promise<void> {
-  await chrome.contextMenus.removeAll();
+  if (menuSetupInProgress) return;
+  menuSetupInProgress = true;
+  try {
+    await chrome.contextMenus.removeAll();
 
-  chrome.contextMenus.create({
-    id: "snooze-parent",
-    title: "Snooze tab",
-    contexts: ["page"],
-  });
-  chrome.contextMenus.create({ id: "snooze-1h", parentId: "snooze-parent", title: "1 hour", contexts: ["page"] });
-  chrome.contextMenus.create({ id: "snooze-2h", parentId: "snooze-parent", title: "2 hours", contexts: ["page"] });
-  chrome.contextMenus.create({ id: "snooze-tomorrow", parentId: "snooze-parent", title: "Tomorrow 9am", contexts: ["page"] });
-  chrome.contextMenus.create({ id: "snooze-monday", parentId: "snooze-parent", title: "Next Monday 9am", contexts: ["page"] });
+    chrome.contextMenus.create({
+      id: "snooze-parent",
+      title: "Snooze tab",
+      contexts: ["page"],
+    });
+    chrome.contextMenus.create({ id: "snooze-1h", parentId: "snooze-parent", title: "1 hour", contexts: ["page"] });
+    chrome.contextMenus.create({ id: "snooze-2h", parentId: "snooze-parent", title: "2 hours", contexts: ["page"] });
+    chrome.contextMenus.create({ id: "snooze-tomorrow", parentId: "snooze-parent", title: "Tomorrow 9am", contexts: ["page"] });
+    chrome.contextMenus.create({ id: "snooze-monday", parentId: "snooze-parent", title: "Next Monday 9am", contexts: ["page"] });
 
-  chrome.contextMenus.create({
-    id: "queue-tab",
-    title: "Queue tab for later",
-    contexts: ["page"],
-  });
+    chrome.contextMenus.create({
+      id: "queue-tab",
+      title: "Queue tab for later",
+      contexts: ["page"],
+    });
 
-  chrome.contextMenus.create({
-    id: "watch-tab",
-    title: "Watch tab for changes...",
-    contexts: ["page"],
-  });
+    chrome.contextMenus.create({
+      id: "watch-tab",
+      title: "Watch tab for changes...",
+      contexts: ["page"],
+    });
+  } finally {
+    menuSetupInProgress = false;
+  }
 }
 
 function getSnoozeWakeTime(menuItemId: string): number {
