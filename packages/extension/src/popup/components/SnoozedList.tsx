@@ -5,17 +5,21 @@ import type { LifecycleTab } from "../../types.js";
 interface SnoozedListProps {
   tabs: LifecycleTab[];
   onWake: (id: string) => void;
+  onWakeAll: () => void;
   onRemove: (id: string) => void;
 }
 
-export const SnoozedList: React.FC<SnoozedListProps> = ({ tabs, onWake, onRemove }) => {
+export const SnoozedList: React.FC<SnoozedListProps> = ({ tabs, onWake, onWakeAll, onRemove }) => {
   if (tabs.length === 0) {
     return <div style={{ padding: 16, textAlign: "center", color: "#6a6e73" }}>No snoozed tabs</div>;
   }
 
   return (
     <div style={{ padding: 8 }}>
-      <div style={{ fontWeight: 600, marginBottom: 8 }}>{tabs.length} snoozed</div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+        <span style={{ fontWeight: 600 }}>{tabs.length} snoozed</span>
+        {tabs.length > 1 && <Button variant="primary" size="sm" onClick={onWakeAll}>Wake All</Button>}
+      </div>
       <div role="list">{tabs.map((tab) => {
         const timeLeft = tab.wakeAt ? tab.wakeAt - Date.now() : 0;
         const minsLeft = Math.max(0, Math.round(timeLeft / 60000));

@@ -5,10 +5,11 @@ import type { LifecycleTab } from "../../types.js";
 interface QueueListProps {
   tabs: LifecycleTab[];
   onNext: () => void;
+  onOpenAll: () => void;
   onRemove: (id: string) => void;
 }
 
-export const QueueList: React.FC<QueueListProps> = ({ tabs, onNext, onRemove }) => {
+export const QueueList: React.FC<QueueListProps> = ({ tabs, onNext, onOpenAll, onRemove }) => {
   const sorted = [...tabs].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
   if (sorted.length === 0) {
@@ -19,7 +20,10 @@ export const QueueList: React.FC<QueueListProps> = ({ tabs, onNext, onRemove }) 
     <div style={{ padding: 8 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
         <span style={{ fontWeight: 600 }}>{sorted.length} queued</span>
-        <Button variant="primary" size="sm" onClick={onNext}>Next</Button>
+        <div style={{ display: "flex", gap: 4 }}>
+          {sorted.length > 1 && <Button variant="secondary" size="sm" onClick={onOpenAll}>Open All</Button>}
+          <Button variant="primary" size="sm" onClick={onNext}>Next</Button>
+        </div>
       </div>
       <div role="list">{sorted.map((tab, i) => (
         <div key={tab.id} role="listitem" tabIndex={0} style={{ display: "flex", alignItems: "center", padding: "4px 0", fontSize: 12 }}>

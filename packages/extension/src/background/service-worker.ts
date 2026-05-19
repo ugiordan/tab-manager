@@ -6,12 +6,14 @@ import { setupContextMenus, handleContextMenuClick } from "./context-menu.js";
 import { activateMeetingMode, deactivateMeetingMode } from "./meeting-mode.js";
 import { wakeTab, getNextQueuedTab, wakeNextQueued, listByState, watchTab, reorderQueue, removeTab, snoozeTab, queueTab } from "./lifecycle-manager.js";
 import { clearAttention } from "./badge-manager.js";
+import { scheduleSnapshot, checkForLostTabs, getPendingRestore, restoreTabs, dismissPendingRestore } from "./session-snapshot.js";
 import { DEFAULT_EXTENSION_CONFIG, isAllowedUrl } from "../types.js";
 
-// Tab tracking
+// Tab tracking + snapshot
 chrome.tabs.onActivated.addListener((info) => { onTabActivated(info.tabId); });
-chrome.tabs.onCreated.addListener((tab) => { if (tab.id) onTabCreated(tab.id); updateBadgeCount(); });
-chrome.tabs.onRemoved.addListener((tabId) => { onTabRemoved(tabId); updateBadgeCount(); });
+chrome.tabs.onCreated.addListener((tab) => { if (tab.id) onTabCreated(tab.id); updateBadgeCount(); scheduleSnapshot(); });
+chrome.tabs.onRemoved.addListener((tabId) => { onTabRemoved(tabId); updateBadgeCount(); scheduleSnapshot(); });
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo) => { if (changeInfo.url) scheduleSnapshot(); });
 
 // Alarms
 chrome.alarms.onAlarm.addListener(handleAlarm);
@@ -34,6 +36,7 @@ chrome.runtime.onStartup.addListener(() => {
   updateBadgeCount();
   connectWebSocket();
   checkOverdueSnoozes();
+  checkForLostTabs();
 });
 
 // Notification click handlers
@@ -83,6 +86,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }).catch(() => sendResponse({ opened: false }));
     return true;
   }
+  if (message.type === "WAKE_ALL") {
+    const state = message.state as "snoozed" | "queued" | "watching" | undefined;
+    listByState(state).then(async (tabs) => {
+      let count = 0;
+      for (const t of tabs) {
+        const woken = await wakeTab(t.id);
+        if (woken && isAllowedUrl(woken.url)) {
+          try {
+            await chrome.tabs.create({ url: woken.url, windowId: woken.originWindowId });
+          } catch {
+            await chrome.tabs.create({ url: woken.url });
+          }
+          count++;
+        }
+      }
+      sendResponse({ wokenCount: count });
+    }).catch(() => sendResponse({ wokenCount: 0 }));
+    return true;
+  }
   if (message.type === "WAKE_TAB") {
     wakeTab(message.lifecycleId).then(async (tab) => {
       if (tab && isAllowedUrl(tab.url)) {
@@ -123,6 +145,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       sendResponse({ watching: true });
     }).catch(() => sendResponse({ watching: false }));
+    return true;
+  }
+  if (message.type === "GET_PENDING_RESTORE") {
+    getPendingRestore().then((tabs) => sendResponse({ tabs })).catch(() => sendResponse({ tabs: [] }));
+    return true;
+  }
+  if (message.type === "RESTORE_TABS") {
+    restoreTabs(message.urls).then((count) => sendResponse({ restored: count })).catch(() => sendResponse({ restored: 0 }));
+    return true;
+  }
+  if (message.type === "DISMISS_RESTORE") {
+    dismissPendingRestore().then(() => sendResponse({ dismissed: true })).catch(() => sendResponse({ dismissed: false }));
     return true;
   }
   if (message.type === "SNOOZE_FROM_POPUP") {
