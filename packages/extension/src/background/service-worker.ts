@@ -7,7 +7,7 @@ import { activateMeetingMode, deactivateMeetingMode } from "./meeting-mode.js";
 import { wakeTab, getNextQueuedTab, wakeNextQueued, listByState, watchTab, reorderQueue, removeTab, snoozeTab, queueTab } from "./lifecycle-manager.js";
 import { clearAttention } from "./badge-manager.js";
 import { scheduleSnapshot, checkForLostTabs, getPendingRestore, restoreTabs, dismissPendingRestore } from "./session-snapshot.js";
-import { DEFAULT_EXTENSION_CONFIG, isAllowedUrl } from "../types.js";
+import { DEFAULT_EXTENSION_CONFIG, isAllowedUrl, type LifecycleTab } from "../types.js";
 
 // Tab tracking + snapshot
 chrome.tabs.onActivated.addListener((info) => { onTabActivated(info.tabId); });
@@ -89,19 +89,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "WAKE_ALL") {
     const state = message.state as "snoozed" | "queued" | "watching" | undefined;
     listByState(state).then(async (tabs) => {
-      let count = 0;
+      const woken: LifecycleTab[] = [];
       for (const t of tabs) {
-        const woken = await wakeTab(t.id);
-        if (woken && isAllowedUrl(woken.url)) {
+        const w = await wakeTab(t.id);
+        if (w && isAllowedUrl(w.url)) woken.push(w);
+      }
+
+      const byWindow = new Map<number, LifecycleTab[]>();
+      for (const t of woken) {
+        const key = t.originWindowId || 0;
+        const group = byWindow.get(key) ?? [];
+        group.push(t);
+        byWindow.set(key, group);
+      }
+
+      for (const [origWindowId, group] of byWindow) {
+        let targetWindowId: number | undefined;
+        if (origWindowId) {
           try {
-            await chrome.tabs.create({ url: woken.url, windowId: woken.originWindowId });
-          } catch {
-            await chrome.tabs.create({ url: woken.url });
+            await chrome.windows.get(origWindowId);
+            targetWindowId = origWindowId;
+          } catch { /* window no longer exists */ }
+        }
+
+        if (targetWindowId) {
+          for (const t of group) {
+            await chrome.tabs.create({ url: t.url, windowId: targetWindowId });
           }
-          count++;
+        } else {
+          const newWin = await chrome.windows.create({ url: group[0].url });
+          for (let i = 1; i < group.length; i++) {
+            await chrome.tabs.create({ url: group[i].url, windowId: newWin.id });
+          }
         }
       }
-      sendResponse({ wokenCount: count });
+
+      sendResponse({ wokenCount: woken.length });
     }).catch(() => sendResponse({ wokenCount: 0 }));
     return true;
   }
